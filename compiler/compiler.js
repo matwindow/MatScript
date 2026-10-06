@@ -37,9 +37,8 @@ const colorsformated = {
     "\\bold\\": "font-weight: bold;",
     "\\italic\\": "font-style: italic;",
     "\\shiny\\": "animation: customShine 1.5s linear infinite;",
-           "\\rainbow\\": "background: linear-gradient(to right, #ff453a, #ff9f0a, #ffd60a, #30d158, #0a84ff, #bf5af2, #ff453a); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: customRainbow 3s linear infinite; width: max-content;",
-    "\\shake\\": "animation: customShake 0.1s linear infinite; width: max-content;"
-
+    "\\rainbow\\": "background: linear-gradient(to right, #ff453a, #ff9f0a, #ffd60a, #30d158, #0a84ff, #bf5af2, #ff453a); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: customRainbow 3s linear infinite; width: max-content; display: block;",
+    "\\shake\\": "animation: customShake 0.1s linear infinite; width: max-content; display: block;"
 };
 
 function printToConsole(text) {
@@ -47,7 +46,7 @@ function printToConsole(text) {
     const lineElement = document.createElement('div');
     
     let finalStyle = "";
-    let cleanText = text;
+    let cleanText = String(text);
 
     for (const [tag, styleValue] of Object.entries(colorsformated)) {
         if (cleanText.includes(tag)) {
@@ -64,36 +63,179 @@ function printToConsole(text) {
     consoleBox.appendChild(lineElement);
 }
 
-export function RUN(code) {
-    let lines = code.split('\n');
-    let lineNum = 0;
+function evaluateExpression(expr, lineNum) {
+    expr = expr.trim();
 
-    for (const line of lines) {
-        lineNum++;
-        let cleanLine = line.trim();
+    if (expr.includes('+')) {
+        let parts = expr.split('+');
+        let combined = "";
+        let allNumbers = true;
+        let evaluatedParts = [];
+
+        for (let part of parts) {
+            let val = evaluateExpression(part, lineNum);
+            if (val === null) return null;
+            if (typeof val !== 'number') allNumbers = false;
+            evaluatedParts.push(val);
+        }
+
+        if (allNumbers) {
+            return evaluatedParts.reduce((a, b) => a + b, 0);
+        } else {
+            return evaluatedParts.map(String).join('');
+        }
+    }
+
+    if (expr.startsWith("'") && expr.endsWith("'")) {
+        return expr.slice(1, -1);
+    }
+
+    if (!isNaN(expr) && expr !== "") {
+        return Number(expr);
+    }
+
+    let varName = expr;
+    if (expr.startsWith("localvar.")) {
+        varName = expr.replace("localvar.", "");
+    }
+
+    if (localvar.hasOwnProperty(varName)) {
+        return localvar[varName];
+    }
+
+    printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";");
+    printToConsole("\\glow\\\\red\\" + expr + " is not known.");
+    return null;
+}
+
+function executeStatements(statements, startLineNum) {
+    let currentLineOffset = 0;
+    
+    for (let i = 0; i < statements.length; i++) {
+        let lineNum = startLineNum + currentLineOffset;
+        let cleanLine = statements[i].trim();
+        currentLineOffset++;
 
         if (cleanLine === "" || cleanLine.startsWith("@@")) {
             continue;
         }
 
+        if (cleanLine.startsWith("locdef ")) {
+            let content = cleanLine.slice(7).trim();
+            let eqIdx = content.indexOf(' ');
+            let varName = content.substring(0, eqIdx).trim();
+            let varValueExpr = content.substring(eqIdx + 1).trim();
+
+            let value = evaluateExpression(varValueExpr, lineNum);
+            if (value === null) return false;
+
+            localvar[varName] = value;
+            continue;
+        }
+
+        if (cleanLine.startsWith("localvar.") && cleanLine.includes("=")) {
+            let parts = cleanLine.split("=");
+            let varName = parts[0].replace("localvar.", "").trim();
+            let expr = parts[1].trim();
+
+            let value = evaluateExpression(expr, lineNum);
+            if (value === null) return false;
+
+            localvar[varName] = value;
+            continue;
+        }
+
+        if (cleanLine.startsWith("Say.error(")) {
+            if (!cleanLine.endsWith(")")) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
+                return false;
+            }
+            let inner = cleanLine.slice(10, -1).trim();
+            try {
+                let validJson = inner.replace(/([a-zA-Z0-9_]+)\s*:/g, '"\$1":').replaceAll("'", '"');
+                let errorObj = JSON.parse(validJson);
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";");
+                printToConsole("\\glow\\\\red\\" + errorObj.error);
+                if (errorObj.stop === true) return false;
+                continue;
+            } catch (e) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Invalid Say.error object syntax.");
+                return false;
+            }
+        }
+
         if (cleanLine.startsWith("Say(")) {
             if (!cleanLine.endsWith(")")) {
                 printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
-                break;
+                return false;
             }
-            
             let inner = cleanLine.slice(4, -1).trim();
-
-            if (inner.startsWith("'") && inner.endsWith("'")) {
-                let cleanText = inner.slice(1, -1);
-                printToConsole(cleanText);
-            } else {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; " + inner + " is not known.");
-                break;
-            }
-        } else {
-            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Command layout not recognized.");
-            break;
+            let result = evaluateExpression(inner, lineNum);
+            if (result === null) return false;
+            printToConsole(result);
+            continue;
         }
+
+        if (cleanLine.startsWith("loop(")) {
+            let openBracketIdx = cleanLine.indexOf("{");
+            if (openBracketIdx === -1) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing opening brace for loop.");
+                return false;
+            }
+
+            let loopCountExpr = cleanLine.slice(5, cleanLine.indexOf(")")).trim();
+            let count = Number(loopCountExpr);
+
+            if (isNaN(count)) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Loop count must be a number.");
+                return false;
+            }
+
+            let loopStatements = [];
+            let j = i;
+            let bracketCount = 1;
+            
+            if (cleanLine.substring(openBracketIdx + 1).trim() !== "") {
+                loopStatements.push(cleanLine.substring(openBracketIdx + 1).trim());
+            }
+
+            j++;
+            while (j < statements.length) {
+                let currentBlockLine = statements[j];
+                if (currentBlockLine.includes("}")) {
+                    let closeIdx = currentBlockLine.indexOf("}");
+                    if (closeIdx > 0) {
+                        loopStatements.push(currentBlockLine.substring(0, closeIdx));
+                    }
+                    bracketCount--;
+                    i = j;
+                    break;
+                }
+                loopStatements.push(currentBlockLine);
+                j++;
+            }
+
+            if (bracketCount !== 0) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing brace for loop.");
+                return false;
+            }
+
+            for (let c = 0; c < count; c++) {
+                let success = executeStatements(loopStatements, lineNum + 1);
+                if (!success) return false;
+            }
+            currentLineOffset += loopStatements.length;
+            continue;
+        }
+
+        printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Command layout not recognized.");
+        return false;
     }
+    return true;
+}
+
+export function RUN(code) {
+    localvar = {};
+    let lines = code.split('\n');
+    executeStatements(lines, 1);
 }
