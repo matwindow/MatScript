@@ -137,9 +137,9 @@ function executeLine(cleanLine, lineNum) {
     }
 
     if (cleanLine.startsWith("localvar.") && cleanLine.includes("=")) {
-        let parts = cleanLine.split("=");
-        let varName = parts[0].replace("localvar.", "").trim();
-        let expr = parts[1].trim();
+        let eqIdx = cleanLine.indexOf("=");
+        let varName = cleanLine.substring(0, eqIdx).replace("localvar.", "").trim();
+        let expr = cleanLine.substring(eqIdx + 1).trim();
 
         let value = evaluateExpression(expr, lineNum);
         if (value === null) return false;
@@ -181,11 +181,11 @@ export function RUN(code) {
             continue;
         }
 
-        if (cleanLine.startsWith("forever{")) {
+        if (cleanLine.startsWith("forever")) {
             let loopLines = [];
             let j = i + 1;
             while (j < lines.length && lines[j].trim() !== "}") {
-                loopLines.push(lines[j]);
+                loopLines.push({ text: lines[j].trim(), origLine: j + 1 });
                 j++;
             }
 
@@ -201,7 +201,7 @@ export function RUN(code) {
                 }
                 
                 for (let k = 0; k < loopLines.length; k++) {
-                    let success = executeLine(loopLines[k].trim(), i + 2 + k);
+                    let success = executeLine(loopLines[k].text, loopLines[k].origLine);
                     if (!success) {
                         clearInterval(loopId);
                         break;
