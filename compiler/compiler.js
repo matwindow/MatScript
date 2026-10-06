@@ -1,4 +1,5 @@
 let localvar = {};
+let activeForeverLoop = null;
 
 const colorsformated = {
     "\\white\\": "color: #ffffff;",
@@ -61,6 +62,7 @@ function printToConsole(text) {
     
     lineElement.innerText = cleanText;
     consoleBox.appendChild(lineElement);
+    consoleBox.scrollTop = consoleBox.scrollHeight;
 }
 
 function evaluateExpression(expr, lineNum) {
@@ -68,7 +70,6 @@ function evaluateExpression(expr, lineNum) {
 
     if (expr.includes('+')) {
         let parts = expr.split('+');
-        let combined = "";
         let allNumbers = true;
         let evaluatedParts = [];
 
@@ -113,6 +114,11 @@ function executeLine(cleanLine, lineNum) {
         return true;
     }
 
+    if (cleanLine === "Say.clear()") {
+        document.getElementById('console').innerHTML = "";
+        return true;
+    }
+
     if (cleanLine.startsWith("locdef ")) {
         let content = cleanLine.slice(7).trim();
         let firstSpace = content.indexOf(' ');
@@ -142,25 +148,6 @@ function executeLine(cleanLine, lineNum) {
         return true;
     }
 
-    if (cleanLine.startsWith("Say.error(")) {
-        if (!cleanLine.endsWith(")")) {
-            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
-            return false;
-        }
-        let inner = cleanLine.slice(10, -1).trim();
-        try {
-            let validJson = inner.replace(/([a-zA-Z0-9_]+)\s*:/g, '"\$1":').replaceAll("'", '"');
-            let errorObj = JSON.parse(validJson);
-            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";");
-            printToConsole("\\glow\\\\red\\" + errorObj.error);
-            if (errorObj.stop === true) return false;
-            return true;
-        } catch (e) {
-            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Invalid Say.error object syntax.");
-            return false;
-        }
-    }
-
     if (cleanLine.startsWith("Say(")) {
         if (!cleanLine.endsWith(")")) {
             printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
@@ -178,6 +165,11 @@ function executeLine(cleanLine, lineNum) {
 }
 
 export function RUN(code) {
+    if (activeForeverLoop) {
+        clearInterval(activeForeverLoop);
+        activeForeverLoop = null;
+    }
+
     localvar = {};
     let lines = code.split('\n');
     
@@ -189,23 +181,7 @@ export function RUN(code) {
             continue;
         }
 
-        if (cleanLine.startsWith("loop(")) {
-            let closeParen = cleanLine.indexOf(")");
-            let openBrace = cleanLine.indexOf("{");
-            
-            if (closeParen === -1 || openBrace === -1) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Invalid loop syntax.");
-                break;
-            }
-
-            let countExpr = cleanLine.slice(5, closeParen).trim();
-            let count = Number(countExpr);
-
-            if (isNaN(count)) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Loop count must be a number.");
-                break;
-            }
-
+        if (cleanLine.startsWith("forever{")) {
             let loopLines = [];
             let j = i + 1;
             while (j < lines.length && lines[j].trim() !== "}") {
@@ -214,25 +190,27 @@ export function RUN(code) {
             }
 
             if (j >= lines.length) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing brace '}' for loop.");
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing brace '}' for forever loop.");
                 break;
             }
 
-            let loopError = false;
-            for (let c = 0; c < count; c++) {
+            let loopId = setInterval(() => {
+                if (activeForeverLoop !== loopId) {
+                    clearInterval(loopId);
+                    return;
+                }
+                
                 for (let k = 0; k < loopLines.length; k++) {
                     let success = executeLine(loopLines[k].trim(), i + 2 + k);
                     if (!success) {
-                        loopError = true;
+                        clearInterval(loopId);
                         break;
                     }
                 }
-                if (loopError) break;
-            }
+            }, 60);
 
-            if (loopError) break;
-            i = j; 
-            continue;
+            activeForeverLoop = loopId;
+            break;
         }
 
         let success = executeLine(cleanLine, lineNum);
