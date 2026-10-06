@@ -90,3 +90,28 @@ Say(localvar.ok)
 9
 10
 ```
+Lets Add Forever Loop!
+```ms
+forever{
+Say.clear()
+Say('Hello')
+}
+```
+Lets Add If!
+```
+if(localvar.hi=='ok'){
+
+}
+```
+Lets Add .lenght!
+```
+Say('ABC'.lenght)
+```
+##### log
+```
+3
+```
+Key Pressed!
+```
+window.key.press('space')
+```
