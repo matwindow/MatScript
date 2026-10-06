@@ -67,11 +67,6 @@
         button:hover {
             background-color: #2ea043;
         }
-        .glow-red {
-            color: #ff453a !important;
-            text-shadow: 0 0 8px #ff453a, 0 0 15px #ff453a;
-            font-weight: bold;
-        }
         @keyframes shine {
             to { background-position: 200% center; }
         }
@@ -106,7 +101,7 @@
                 RUN(matsCode);
             } else {
                 const errorDiv = document.createElement('div');
-                errorDiv.className = 'glow-red';
+                errorDiv.style.cssText = "color: #ff453a; text-shadow: 0 0 8px #ff453a; font-weight: bold;";
                 errorDiv.innerText = "\\glow\\\\red\\Error: compiler.js file or RUN function not found.";
                 consoleOut.appendChild(errorDiv);
             }
