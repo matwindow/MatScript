@@ -1,2 +1,2 @@
 # MatScript
-MatS(MatScript) Is a programing lang made by me!
+MatS(MatScript) is a programing lang made by (https://github.com/matwindow)[***me!***]
