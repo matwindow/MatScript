@@ -36,7 +36,9 @@ const colorsformated = {
     "\\glow\\": "text-shadow: 0 0 8px currentColor, 0 0 15px currentColor;",
     "\\bold\\": "font-weight: bold;",
     "\\italic\\": "font-style: italic;",
-    "\\shiny\\": "animation: customShine 1.5s linear infinite;"
+    "\\shiny\\": "animation: customShine 1.5s linear infinite;",
+    "\\rainbow\\": "animation: customRainbow 3s linear infinite;",
+    "\\shake\\": "animation: customShake 0.1s linear infinite; display: inline-block;"
 };
 
 function printToConsole(text) {
