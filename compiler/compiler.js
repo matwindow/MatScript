@@ -1,5 +1,16 @@
 let localvar = {};
 let activeForeverLoop = null;
+let lastKeyPressed = "";
+
+window.addEventListener('keydown', (e) => {
+    let keyName = e.key.toLowerCase();
+    if (keyName === " ") keyName = "space";
+    lastKeyPressed = keyName;
+});
+
+window.addEventListener('keyup', () => {
+    lastKeyPressed = "";
+});
 
 const colorsformated = {
     "\\white\\": "color: #ffffff;",
@@ -45,21 +56,17 @@ const colorsformated = {
 function printToConsole(text) {
     const consoleBox = document.getElementById('console');
     const lineElement = document.createElement('div');
-    
     let finalStyle = "";
     let cleanText = String(text);
-
     for (const [tag, styleValue] of Object.entries(colorsformated)) {
         if (cleanText.includes(tag)) {
             finalStyle += styleValue + " ";
             cleanText = cleanText.replaceAll(tag, "");
         }
     }
-
     if (finalStyle !== "") {
         lineElement.style.cssText = finalStyle;
     }
-    
     lineElement.innerText = cleanText;
     consoleBox.appendChild(lineElement);
     consoleBox.scrollTop = consoleBox.scrollHeight;
@@ -67,58 +74,60 @@ function printToConsole(text) {
 
 function evaluateExpression(expr, lineNum) {
     expr = expr.trim();
-
+    if (expr.endsWith(".lenght")) {
+        let baseExpr = expr.slice(0, -7).trim();
+        let baseVal = evaluateExpression(baseExpr, lineNum);
+        if (baseVal === null) return null;
+        return String(baseVal).length;
+    }
+    if (expr.startsWith("window.key.press(") && expr.endsWith(")")) {
+        let targetKey = expr.slice(17, -1).trim();
+        if (targetKey.startsWith("'") && targetKey.endsWith("'")) {
+            targetKey = targetKey.slice(1, -1);
+        }
+        return lastKeyPressed === targetKey.toLowerCase();
+    }
     if (expr.includes('+')) {
         let parts = expr.split('+');
         let allNumbers = true;
         let evaluatedParts = [];
-
         for (let part of parts) {
             let val = evaluateExpression(part, lineNum);
             if (val === null) return null;
             if (typeof val !== 'number') allNumbers = false;
             evaluatedParts.push(val);
         }
-
         if (allNumbers) {
             return evaluatedParts.reduce((a, b) => a + b, 0);
         } else {
             return evaluatedParts.map(String).join('');
         }
     }
-
     if (expr.startsWith("'") && expr.endsWith("'")) {
         return expr.slice(1, -1);
     }
-
     if (!isNaN(expr) && expr !== "") {
         return Number(expr);
     }
-
     let varName = expr;
     if (expr.startsWith("localvar.")) {
         varName = expr.replace("localvar.", "");
     }
-
     if (localvar.hasOwnProperty(varName)) {
         return localvar[varName];
     }
-
     printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";");
     printToConsole("\\glow\\\\red\\" + expr + " is not known.");
     return null;
 }
-
 function executeLine(cleanLine, lineNum) {
     if (cleanLine === "" || cleanLine.startsWith("@@")) {
         return true;
     }
-
     if (cleanLine === "Say.clear()") {
         document.getElementById('console').innerHTML = "";
         return true;
     }
-
     if (cleanLine.startsWith("locdef ")) {
         let content = cleanLine.slice(7).trim();
         let firstSpace = content.indexOf(' ');
@@ -128,26 +137,20 @@ function executeLine(cleanLine, lineNum) {
         }
         let varName = content.substring(0, firstSpace).trim();
         let varValueExpr = content.substring(firstSpace + 1).trim();
-
         let value = evaluateExpression(varValueExpr, lineNum);
         if (value === null) return false;
-
         localvar[varName] = value;
         return true;
     }
-
     if (cleanLine.startsWith("localvar.") && cleanLine.includes("=")) {
         let eqIdx = cleanLine.indexOf("=");
         let varName = cleanLine.substring(0, eqIdx).replace("localvar.", "").trim();
         let expr = cleanLine.substring(eqIdx + 1).trim();
-
         let value = evaluateExpression(expr, lineNum);
         if (value === null) return false;
-
         localvar[varName] = value;
         return true;
     }
-
     if (cleanLine.startsWith("Say(")) {
         if (!cleanLine.endsWith(")")) {
             printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
@@ -159,9 +162,111 @@ function executeLine(cleanLine, lineNum) {
         printToConsole(result);
         return true;
     }
-
+    if (cleanLine.startsWith("Say.error(")) {
+        if (!cleanLine.endsWith(")")) {
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
+            return false;
+        }
+        let inner = cleanLine.slice(10, -1).trim();
+        try {
+            let validJson = inner.replace(/([a-zA-Z0-9_]+)\s*:/g, '"\$1":').replaceAll("'", '"');
+            let errorObj = JSON.parse(validJson);
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";");
+            printToConsole("\\glow\\\\red\\" + errorObj.error);
+            if (errorObj.stop === true) return false;
+            return true;
+        } catch (e) {
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Invalid Say.error object syntax.");
+            return false;
+        }
+    }
     printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Command layout not recognized.");
     return false;
+}
+
+function parseBlocks(lines) {
+    let program = [];
+    for (let i = 0; i < lines.length; i++) {
+        let lineNum = i + 1;
+        let cleanLine = lines[i].trim();
+        if (cleanLine === "" || cleanLine.startsWith("@@")) continue;
+        if (cleanLine.startsWith("forever")) {
+            let blockLines = [];
+            let j = i + 1;
+            while (j < lines.length && lines[j].trim() !== "}") {
+                blockLines.push(lines[j].trim());
+                j++;
+            }
+            program.push({ type: 'forever', body: blockLines, line: lineNum });
+            i = j;
+            continue;
+        }
+        if (cleanLine.startsWith("loop(")) {
+            let closeParen = cleanLine.indexOf(")");
+            let countExpr = cleanLine.slice(5, closeParen).trim();
+            let blockLines = [];
+            let j = i + 1;
+            while (j < lines.length && lines[j].trim() !== "}") {
+                blockLines.push(lines[j].trim());
+                j++;
+            }
+            program.push({ type: 'loop', countExpr: countExpr, body: blockLines, line: lineNum });
+            i = j;
+            continue;
+        }
+        if (cleanLine.startsWith("if(")) {
+            let closeParen = cleanLine.indexOf(")");
+            let condExpr = cleanLine.slice(3, closeParen).trim();
+            let blockLines = [];
+            let j = i + 1;
+            while (j < lines.length && lines[j].trim() !== "}") {
+                blockLines.push(lines[j].trim());
+                j++;
+            }
+            program.push({ type: 'if', condExpr: condExpr, body: blockLines, line: lineNum });
+            i = j;
+            continue;
+        }
+        program.push({ type: 'single', text: cleanLine, line: lineNum });
+    }
+    return program;
+}
+
+function executeBlockList(blocks) {
+    for (let block of blocks) {
+        if (block.type === 'single') {
+            let success = executeLine(block.text, block.line);
+            if (!success) return false;
+        } else if (block.type === 'if') {
+            let expr = block.condExpr;
+            let match = expr.match(/(.+)(==|!=|<|>)(.+)/);
+            if (match) {
+                let left = evaluateExpression(match[1], block.line);
+                let op = match[2];
+                let right = evaluateExpression(match[3], block.line);
+                let conditionMet = false;
+                if (op === "==") conditionMet = (left == right);
+                else if (op === "!=") conditionMet = (left != right);
+                else if (op === "<") conditionMet = (left < right);
+                else if (op === ">") conditionMet = (left > right);
+                if (conditionMet) {
+                    let innerBlocks = parseBlocks(block.body);
+                    let success = executeBlockList(innerBlocks);
+                    if (!success) return false;
+                }
+            }
+        } else if (block.type === 'loop') {
+            let count = Number(evaluateExpression(block.countExpr, block.line));
+            if (!isNaN(count)) {
+                let innerBlocks = parseBlocks(block.body);
+                for (let c = 0; c < count; c++) {
+                    let success = executeBlockList(innerBlocks);
+                    if (!success) return false;
+                }
+            }
+        }
+    }
+    return true;
 }
 
 export function RUN(code) {
@@ -169,51 +274,24 @@ export function RUN(code) {
         clearInterval(activeForeverLoop);
         activeForeverLoop = null;
     }
-
     localvar = {};
     let lines = code.split('\n');
-    
-    for (let i = 0; i < lines.length; i++) {
-        let lineNum = i + 1;
-        let cleanLine = lines[i].trim();
-
-        if (cleanLine === "" || cleanLine.startsWith("@@")) {
-            continue;
-        }
-
-        if (cleanLine.startsWith("forever")) {
-            let loopLines = [];
-            let j = i + 1;
-            while (j < lines.length && lines[j].trim() !== "}") {
-                loopLines.push({ text: lines[j].trim(), origLine: j + 1 });
-                j++;
+    let blocks = parseBlocks(lines);
+    let hasForever = blocks.find(b => b.type === 'forever');
+    if (hasForever) {
+        let initialBlocks = blocks.filter(b => b.type !== 'forever');
+        let success = executeBlockList(initialBlocks);
+        if (!success) return;
+        let innerForeverBlocks = parseBlocks(hasForever.body);
+        let loopId = setInterval(() => {
+            if (activeForeverLoop !== loopId) {
+                clearInterval(loopId);
+                return;
             }
-
-            if (j >= lines.length) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing brace '}' for forever loop.");
-                break;
-            }
-
-            let loopId = setInterval(() => {
-                if (activeForeverLoop !== loopId) {
-                    clearInterval(loopId);
-                    return;
-                }
-                
-                for (let k = 0; k < loopLines.length; k++) {
-                    let success = executeLine(loopLines[k].text, loopLines[k].origLine);
-                    if (!success) {
-                        clearInterval(loopId);
-                        break;
-                    }
-                }
-            }, 60);
-
-            activeForeverLoop = loopId;
-            break;
-        }
-
-        let success = executeLine(cleanLine, lineNum);
-        if (!success) break;
+            executeBlockList(innerForeverBlocks);
+        }, 60);
+        activeForeverLoop = loopId;
+    } else {
+        executeBlockList(blocks);
     }
 }
