@@ -31,26 +31,36 @@ function printToConsole(text) {
     consoleBox.appendChild(lineElement);
 }
 
-function RUN(code){
-let lines=code.split('\n')
-  let lineNum=0
-  for (const line of lines){
-    lineNum++
-    if (line.startsWith("Say(")) {
-    if (!line.endsWith(")")) {
-        printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";\n\\glow\\\\red\\Missing closing parenthesis.");
-        break;
-    }
-    
-    let inner = line.slice(4, -1).trim();
+export function RUN(code) {
+    let lines = code.split('\n');
+    let lineNum = 0;
 
-    if (inner.startsWith("'") && inner.endsWith("'")) {
-        let cleanText = inner.slice(1, -1);
-        printToConsole(cleanText);
-    } else {
-        printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";\n\\glow\\\\red\\" + inner + " is not known.");
-        break;
+    for (const line of lines) {
+        lineNum++;
+        let cleanLine = line.trim();
+
+        if (cleanLine === "" || cleanLine.startsWith("@@")) {
+            continue;
+        }
+
+        if (cleanLine.startsWith("Say(")) {
+            if (!cleanLine.endsWith(")")) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
+                break;
+            }
+            
+            let inner = cleanLine.slice(4, -1).trim();
+
+            if (inner.startsWith("'") && inner.endsWith("'")) {
+                let cleanText = inner.slice(1, -1);
+                printToConsole(cleanText);
+            } else {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; " + inner + " is not known.");
+                break;
+            }
+        } else {
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Command layout not recognized.");
+            break;
+        }
     }
-}
-  }
 }
