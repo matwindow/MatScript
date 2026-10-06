@@ -31,3 +31,23 @@ Say(localvar.hello)
 ```log
 omg
 ```
+Lets Add Errors!
+```MatS
+Say(omg)
+```
+##### log:
+```log
+\red\\glow\Error In Line 1;
+\red\\glow\omg is not known.
+
+```
+We Will Have Your Own Errors!
+```MatS
+Say.error({stop:false,error:'You Farted!'})
+```
+##### log:
+```log
+\red\\glow\Error In Line 1;
+\red\\glow\You Farted!
+
+```
