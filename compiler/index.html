@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MatScript Compiler</title>
     <link rel="icon" type="image/png" href="icon.png">
-    <script src="https://jsdelivr.net"></script>
     <style>
         body {
             background-color: #0d1117;
@@ -68,11 +68,6 @@
         button:hover {
             background-color: #2ea043;
         }
-        button:disabled {
-            background-color: #21262d;
-            color: #8b949e;
-            cursor: not-allowed;
-        }
         .glow-red {
             color: #ff453a !important;
             text-shadow: 0 0 8px #ff453a, 0 0 15px #ff453a;
@@ -84,7 +79,7 @@
 
     <h1>MatScript (.mats) Compiler & Console</h1>
     
-    <button id="runBtn" onclick="runMatScript()" disabled>Loading Compiler Engine...</button>
+    <button id="runBtn" onclick="runMatScript()">Run Code</button>
 
     <div class="container">
         <div class="panel">
@@ -97,85 +92,23 @@
         </div>
     </div>
 
+    <script src="compiler.js"></script>
+
     <script>
-        let pyodideInstance = null;
-        let compilerPythonCode = "";
-
-        async function initCompiler() {
-            const consoleOut = document.getElementById('console');
-            const runBtn = document.getElementById('runBtn');
-            consoleOut.innerText = "Initializing web compiler sandbox environment...\n";
-            
-            try {
-                const response = await fetch('compiler.py');
-                if (!response.ok) throw new Error("Could not load compiler.py from server.");
-                compilerPythonCode = await response.text();
-
-                pyodideInstance = await loadPyodide();
-                
-                consoleOut.innerText += "Compiler Engine Loaded Successfully!\nReady to run MatScript!";
-                runBtn.innerText = "Run Code";
-                runBtn.disabled = false;
-            } catch (err) {
-                consoleOut.innerText += `Initialization Error: ${err.message}\nMake sure compiler.py is in the same directory as index.html.`;
-            }
-        }
-
-        async function runMatScript() {
-            if (!pyodideInstance) return;
-
+        function runMatScript() {
             const consoleOut = document.getElementById('console');
             const matsCode = document.getElementById('editor').value;
             consoleOut.innerHTML = "";
 
-            try {
-                pyodideInstance.runPython(`
-                    import sys
-                    import io
-                    sys.stdout = io.StringIO()
-                    sys.stderr = io.StringIO()
-                `);
-
-                pyodideInstance.FS.writeFile('/workspace.mats', matsCode, { encoding: 'utf8' });
-
-                await pyodideInstance.runPythonAsync(compilerPythonCode);
-
-                await pyodideInstance.runPythonAsync(`
-                    import sys
-                    sys.argv = ['compiler.py', '/workspace.mats']
-                    localvar_storage.clear()
-                    try:
-                        execute_compiler('/workspace.mats')
-                    except SystemExit:
-                        pass
-                `);
-
-                const rawOutput = pyodideInstance.runPython("sys.stdout.getvalue()");
-                
-                const lines = rawOutput.split('\n');
-                lines.forEach(line => {
-                    if (line.startsWith('\\red\\glow\\')) {
-                        const cleanLine = line.replace(/\\red\\glow\\/g, '');
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'glow-red';
-                        errorDiv.innerText = `\\red\\glow\\${cleanLine}`;
-                        consoleOut.appendChild(errorDiv);
-                    } else if (line.trim() !== "") {
-                        const standardLine = document.createElement('div');
-                        standardLine.innerText = line;
-                        consoleOut.appendChild(standardLine);
-                    }
-                });
-
-            } catch (err) {
+            if (typeof executeCompiler === 'function') {
+                executeCompiler(matsCode);
+            } else {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'glow-red';
-                errorDiv.innerText = `\\red\\glow\\Web Runtime Error: ${err.message}`;
+                errorDiv.innerText = "\\red\\glow\\Error: compiler.js file or executeCompiler function not found.";
                 consoleOut.appendChild(errorDiv);
             }
         }
-
-        initCompiler();
     </script>
 
 </body>
