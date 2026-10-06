@@ -72,6 +72,19 @@
             50% { text-shadow: 0 0 10px #ffffff, 2px 0 15px currentColor, -2px 0 15px #ffffff; }
             100% { text-shadow: 10px 0 5px rgba(255,255,255,0), 0 0 4px currentColor; }
         }
+        @keyframes customShake {
+    0% { transform: translate(0, 0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0, 0); }
+}
+        @keyframes customRainbow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
     </style>
 </head>
 <body>
