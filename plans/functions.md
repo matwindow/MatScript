@@ -22,3 +22,12 @@ And for easyer text:
 Say('Welcome '+localvar.name+'!')
 
 ```
+Vars gonna have this:
+```MatS
+locvardef hello 'omg'
+Say(localvar.hello)
+```
+##### Log:
+```log
+omg
+```
