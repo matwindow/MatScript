@@ -67,8 +67,10 @@
         button:hover {
             background-color: #2ea043;
         }
-        @keyframes shine {
-            to { background-position: 200% center; }
+        @keyframes customShine {
+            0% { text-shadow: -10px 0 5px rgba(255,255,255,0), 0 0 4px currentColor; }
+            50% { text-shadow: 0 0 10px #ffffff, 2px 0 15px currentColor, -2px 0 15px #ffffff; }
+            100% { text-shadow: 10px 0 5px rgba(255,255,255,0), 0 0 4px currentColor; }
         }
     </style>
 </head>
@@ -81,7 +83,7 @@
     <div class="container">
         <div class="panel">
             <h3>Input (.mats)</h3>
-            <textarea id="editor" placeholder="Say('Hi')"></textarea>
+            <textarea id="editor" placeholder="Say('\red\\glow\\shiny\Hey!!!')"></textarea>
         </div>
         <div class="panel">
             <h3>Log Output</h3>
