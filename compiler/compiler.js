@@ -37,7 +37,8 @@ const colorsformated = {
     "\\bold\\": "font-weight: bold;",
     "\\italic\\": "font-style: italic;",
     "\\shiny\\": "animation: customShine 1.5s linear infinite;",
-    "\\rainbow\\": "animation: customRainbow 3s linear infinite;",
+        "\\rainbow\\": "background: linear-gradient(to right, #ff453a, #ff9f0a, #ffd60a, #30d158, #0a84ff, #bf5af2, #ff453a); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: customRainbow 3s linear infinite; display: inline-block;",
+
     "\\shake\\": "animation: customShake 0.1s linear infinite; display: inline-block;"
 };
 
