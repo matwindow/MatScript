@@ -52,6 +52,12 @@
             overflow-y: auto;
             white-space: pre-wrap;
         }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-self: flex-start;
+        }
         button {
             background-color: #238636;
             color: white;
@@ -61,37 +67,46 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            margin-bottom: 15px;
-            align-self: flex-start;
         }
         button:hover {
             background-color: #2ea043;
+        }
+        .secondary-btn {
+            background-color: #21262d;
+            border-color: #30363d;
+        }
+        .secondary-btn:hover {
+            background-color: #30363d;
         }
         @keyframes customShine {
             0% { text-shadow: -10px 0 5px rgba(255,255,255,0), 0 0 4px currentColor; }
             50% { text-shadow: 0 0 10px #ffffff, 2px 0 15px currentColor, -2px 0 15px #ffffff; }
             100% { text-shadow: 10px 0 5px rgba(255,255,255,0), 0 0 4px currentColor; }
         }
-        @keyframes customShake {
-    0% { transform: translate(0, 0); }
-    20% { transform: translate(-2px, 2px); }
-    40% { transform: translate(-2px, -2px); }
-    60% { transform: translate(2px, 2px); }
-    80% { transform: translate(2px, -2px); }
-    100% { transform: translate(0, 0); }
-}
         @keyframes customRainbow {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
-}
-
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        @keyframes customShake {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0, 0); }
+        }
     </style>
 </head>
 <body>
 
     <h1>MatScript (.mats) Compiler & Console</h1>
     
-    <button id="runBtn">Run Code</button>
+    <div class="btn-group">
+        <button id="runBtn">Run Code</button>
+        <button id="exportBtn" class="secondary-btn">Export Code</button>
+        <button id="importBtn" class="secondary-btn">Import Code</button>
+    </div>
+    <input type="file" id="fileInput" accept=".mats" style="display: none;">
 
     <div class="container">
         <div class="panel">
@@ -117,6 +132,31 @@
             } else {
                 consoleOut.innerText = "Error: RUN function is not available.";
             }
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const matsCode = document.getElementById('editor').value;
+            const blob = new Blob([matsCode], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'program.mats';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('importBtn').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('editor').value = e.target.result;
+            };
+            reader.readAsText(file);
         });
     </script>
 
