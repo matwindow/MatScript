@@ -76,12 +76,12 @@
 
     <h1>MatScript (.mats) Compiler & Console</h1>
     
-    <button id="runBtn" onclick="runMatScript()">Run Code</button>
+    <button id="runBtn">Run Code</button>
 
     <div class="container">
         <div class="panel">
             <h3>Input (.mats)</h3>
-            <textarea id="editor" placeholder="locvardef test 'hello world'&#10;Say(localvar.test)"></textarea>
+            <textarea id="editor" placeholder="Say('Hi')"></textarea>
         </div>
         <div class="panel">
             <h3>Log Output</h3>
@@ -89,10 +89,10 @@
         </div>
     </div>
 
-    <script src="compiler.js"></script>
+    <script type="module">
+        import { RUN } from './compiler.js';
 
-    <script>
-        function runMatScript() {
+        document.getElementById('runBtn').addEventListener('click', () => {
             const consoleOut = document.getElementById('console');
             const matsCode = document.getElementById('editor').value;
             consoleOut.innerHTML = "";
@@ -100,12 +100,9 @@
             if (typeof RUN === 'function') {
                 RUN(matsCode);
             } else {
-                const errorDiv = document.createElement('div');
-                errorDiv.style.cssText = "color: #ff453a; text-shadow: 0 0 8px #ff453a; font-weight: bold;";
-                errorDiv.innerText = "\\glow\\\\red\\Error: compiler.js file or RUN function not found.";
-                consoleOut.appendChild(errorDiv);
+                consoleOut.innerText = "Error: RUN function is not available.";
             }
-        }
+        });
     </script>
 
 </body>
