@@ -108,134 +108,134 @@ function evaluateExpression(expr, lineNum) {
     return null;
 }
 
-function executeStatements(statements, startLineNum) {
-    let currentLineOffset = 0;
-    
-    for (let i = 0; i < statements.length; i++) {
-        let lineNum = startLineNum + currentLineOffset;
-        let cleanLine = statements[i].trim();
-        currentLineOffset++;
-
-        if (cleanLine === "" || cleanLine.startsWith("@@")) {
-            continue;
-        }
-
-        if (cleanLine.startsWith("locdef ")) {
-            let content = cleanLine.slice(7).trim();
-            let eqIdx = content.indexOf(' ');
-            let varName = content.substring(0, eqIdx).trim();
-            let varValueExpr = content.substring(eqIdx + 1).trim();
-
-            let value = evaluateExpression(varValueExpr, lineNum);
-            if (value === null) return false;
-
-            localvar[varName] = value;
-            continue;
-        }
-
-        if (cleanLine.startsWith("localvar.") && cleanLine.includes("=")) {
-            let parts = cleanLine.split("=");
-            let varName = parts[0].replace("localvar.", "").trim();
-            let expr = parts[1].trim();
-
-            let value = evaluateExpression(expr, lineNum);
-            if (value === null) return false;
-
-            localvar[varName] = value;
-            continue;
-        }
-
-        if (cleanLine.startsWith("Say.error(")) {
-            if (!cleanLine.endsWith(")")) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
-                return false;
-            }
-            let inner = cleanLine.slice(10, -1).trim();
-            try {
-                let validJson = inner.replace(/([a-zA-Z0-9_]+)\s*:/g, '"\$1":').replaceAll("'", '"');
-                let errorObj = JSON.parse(validJson);
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";");
-                printToConsole("\\glow\\\\red\\" + errorObj.error);
-                if (errorObj.stop === true) return false;
-                continue;
-            } catch (e) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Invalid Say.error object syntax.");
-                return false;
-            }
-        }
-
-        if (cleanLine.startsWith("Say(")) {
-            if (!cleanLine.endsWith(")")) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
-                return false;
-            }
-            let inner = cleanLine.slice(4, -1).trim();
-            let result = evaluateExpression(inner, lineNum);
-            if (result === null) return false;
-            printToConsole(result);
-            continue;
-        }
-
-        if (cleanLine.startsWith("loop(")) {
-            let openBracketIdx = cleanLine.indexOf("{");
-            if (openBracketIdx === -1) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing opening brace for loop.");
-                return false;
-            }
-
-            let loopCountExpr = cleanLine.slice(5, cleanLine.indexOf(")")).trim();
-            let count = Number(loopCountExpr);
-
-            if (isNaN(count)) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Loop count must be a number.");
-                return false;
-            }
-
-            let loopStatements = [];
-            let j = i;
-            let bracketCount = 1;
-            
-            if (cleanLine.substring(openBracketIdx + 1).trim() !== "") {
-                loopStatements.push(cleanLine.substring(openBracketIdx + 1).trim());
-            }
-
-            j++;
-            while (j < statements.length) {
-                let currentBlockLine = statements[j];
-                if (currentBlockLine.includes("}")) {
-                    let closeIdx = currentBlockLine.indexOf("}");
-                    if (closeIdx > 0) {
-                        loopStatements.push(currentBlockLine.substring(0, closeIdx));
-                    }
-                    bracketCount--;
-                    i = j;
-                    break;
-                }
-                loopStatements.push(currentBlockLine);
-                j++;
-            }
-
-            if (bracketCount !== 0) {
-                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing brace for loop.");
-                return false;
-            }
-
-            for (let c = 0; c < count; c++) {
-                let success = executeStatements(loopStatements, lineNum + 1);
-                if (!success) return false;
-            }
-            currentLineOffset += loopStatements.length;
-            continue;
-        }
-
-        printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Command layout not recognized.");
-        return false;
+function executeLine(cleanLine, lineNum) {
+    if (cleanLine === "" || cleanLine.startsWith("@@")) {
+        return true;
     }
-    return true;
+
+    if (cleanLine.startsWith("locdef ")) {
+        let content = cleanLine.slice(7).trim();
+        let firstSpace = content.indexOf(' ');
+        if (firstSpace === -1) {
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Invalid locdef syntax.");
+            return false;
+        }
+        let varName = content.substring(0, firstSpace).trim();
+        let varValueExpr = content.substring(firstSpace + 1).trim();
+
+        let value = evaluateExpression(varValueExpr, lineNum);
+        if (value === null) return false;
+
+        localvar[varName] = value;
+        return true;
+    }
+
+    if (cleanLine.startsWith("localvar.") && cleanLine.includes("=")) {
+        let parts = cleanLine.split("=");
+        let varName = parts[0].replace("localvar.", "").trim();
+        let expr = parts[1].trim();
+
+        let value = evaluateExpression(expr, lineNum);
+        if (value === null) return false;
+
+        localvar[varName] = value;
+        return true;
+    }
+
+    if (cleanLine.startsWith("Say.error(")) {
+        if (!cleanLine.endsWith(")")) {
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
+            return false;
+        }
+        let inner = cleanLine.slice(10, -1).trim();
+        try {
+            let validJson = inner.replace(/([a-zA-Z0-9_]+)\s*:/g, '"\$1":').replaceAll("'", '"');
+            let errorObj = JSON.parse(validJson);
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";");
+            printToConsole("\\glow\\\\red\\" + errorObj.error);
+            if (errorObj.stop === true) return false;
+            return true;
+        } catch (e) {
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Invalid Say.error object syntax.");
+            return false;
+        }
+    }
+
+    if (cleanLine.startsWith("Say(")) {
+        if (!cleanLine.endsWith(")")) {
+            printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing parenthesis.");
+            return false;
+        }
+        let inner = cleanLine.slice(4, -1).trim();
+        let result = evaluateExpression(inner, lineNum);
+        if (result === null) return false;
+        printToConsole(result);
+        return true;
+    }
+
+    printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Command layout not recognized.");
+    return false;
 }
 
 export function RUN(code) {
     localvar = {};
     let lines = code.split('\n');
-    executeStatements(lines, 1);
+    
+    for (let i = 0; i < lines.length; i++) {
+        let lineNum = i + 1;
+        let cleanLine = lines[i].trim();
+
+        if (cleanLine === "" || cleanLine.startsWith("@@")) {
+            continue;
+        }
+
+        if (cleanLine.startsWith("loop(")) {
+            let closeParen = cleanLine.indexOf(")");
+            let openBrace = cleanLine.indexOf("{");
+            
+            if (closeParen === -1 || openBrace === -1) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Invalid loop syntax.");
+                break;
+            }
+
+            let countExpr = cleanLine.slice(5, closeParen).trim();
+            let count = Number(countExpr);
+
+            if (isNaN(count)) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Loop count must be a number.");
+                break;
+            }
+
+            let loopLines = [];
+            let j = i + 1;
+            while (j < lines.length && lines[j].trim() !== "}") {
+                loopLines.push(lines[j]);
+                j++;
+            }
+
+            if (j >= lines.length) {
+                printToConsole("\\glow\\\\red\\Error In Line " + lineNum + "; Missing closing brace '}' for loop.");
+                break;
+            }
+
+            let loopError = false;
+            for (let c = 0; c < count; c++) {
+                for (let k = 0; k < loopLines.length; k++) {
+                    let success = executeLine(loopLines[k].trim(), i + 2 + k);
+                    if (!success) {
+                        loopError = true;
+                        break;
+                    }
+                }
+                if (loopError) break;
+            }
+
+            if (loopError) break;
+            i = j; 
+            continue;
+        }
+
+        let success = executeLine(cleanLine, lineNum);
+        if (!success) break;
+    }
 }
