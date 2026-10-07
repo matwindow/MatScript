@@ -1,5 +1,44 @@
 let activeForeverLoop = null;
 let localvar = {};
+function evaluateExpression(expr, lineNum) {
+    let cleanExpr = expr.trim();
+
+    if (cleanExpr.includes('+')) {
+        let parts = cleanExpr.split('+');
+        let finalString = "";
+        for (let part of parts) {
+            let evaluatedPart = evaluateExpression(part, lineNum);
+            if (evaluatedPart === null) return null;
+            finalString += evaluatedPart;
+        }
+        return finalString;
+    }
+
+    if (cleanExpr.endsWith('.length') || cleanExpr.endsWith('.lenght')) {
+        let baseExpr = cleanExpr.substring(0, cleanExpr.lastIndexOf('.')).trim();
+        let baseValue = evaluateExpression(baseExpr, lineNum);
+        if (baseValue === null) return null;
+        return String(baseValue).length;
+    }
+
+    if (cleanExpr.startsWith("'") && cleanExpr.endsWith("'")) {
+        return cleanExpr.slice(1, -1);
+    }
+
+    if (!isNaN(cleanExpr) && cleanExpr !== "") {
+        return Number(cleanExpr);
+    }
+
+    let varName = cleanExpr.replace("localvar.", "").trim();
+    if (localvar.hasOwnProperty(varName)) {
+        return localvar[varName];
+    }
+
+    printToConsole("\\red\\\\glow\\Error In Line " + lineNum + ";");
+    printToConsole("\\red\\\\glow\\" + cleanExpr + " is not known.");
+    return null;
+}
+
 function executeLine(cleanLine, lineNum) {
     if (cleanLine === "" || cleanLine.startsWith("@@")) {
         return true;
