@@ -1,4 +1,5 @@
 let activeForeverLoop = null;
+let localvar = {};
 function executeLine(cleanLine, lineNum) {
     if (cleanLine === "" || cleanLine.startsWith("@@")) {
         return true;
