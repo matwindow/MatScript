@@ -60,15 +60,23 @@ function printToConsole(text) {
     if (!consoleBox) return;
     const lineElement = document.createElement('div');
     
-    let cleanText = String(text);
+
+    let cleanText = text !== undefined && text !== null ? String(text) : "";
+    
+  
     const tagNames = Object.keys(colorsformated).map(t => t.replace(/\\/g, '\\\\')).join('|');
     const regex = new RegExp(`(${tagNames})`, 'g');
+    
+ 
     let parts = cleanText.split(regex);
     
     let finalHtml = "";
     let isSpanOpen = false;
     
     for (let part of parts) {
+      
+        if (part === undefined || part === null) continue;
+        
         if (colorsformated[part] !== undefined) {
             if (isSpanOpen) {
                 finalHtml += "</span>";
@@ -77,7 +85,10 @@ function printToConsole(text) {
             finalHtml += `<span style="${colorsformated[part]}">`;
             isSpanOpen = true;
         } else {
-            finalHtml += part;
+          
+            if (part !== "") {
+                finalHtml += part;
+            }
         }
     }
     
@@ -89,6 +100,7 @@ function printToConsole(text) {
     consoleBox.appendChild(lineElement);
     consoleBox.scrollTop = consoleBox.scrollHeight;
 }
+
 
 function evaluateExpression(expr, lineNum) {
     expr = expr.trim();
