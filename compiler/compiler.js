@@ -13,6 +13,7 @@ window.addEventListener('keyup', () => {
 });
 
 const colorsformated = {
+    "\\black\\": "color: #ffffff;",
     "\\white\\": "color: #ffffff;",
     "\\red\\": "color: #ff453a;",
     "\\blue\\": "color: #0a84ff;",
