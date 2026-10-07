@@ -107,7 +107,7 @@ function evaluateExpression(expr, lineNum) {
     if (expr.endsWith(".lenght")) {
         let baseExpr = expr.slice(0, -7).trim();
         let baseVal = evaluateExpression(baseExpr, lineNum);
-        if (baseVal === null) return null;
+        if (baseVal === null) return "";
         return String(baseVal).length;
     }
     if (expr.startsWith("window.key.press(") && expr.endsWith(")")) {
@@ -123,14 +123,16 @@ function evaluateExpression(expr, lineNum) {
         let evaluatedParts = [];
         for (let part of parts) {
             let val = evaluateExpression(part, lineNum);
-            if (val === null) return null;
+            if (val === null || val === undefined) {
+                val = ""; 
+            }
             if (typeof val !== 'number') allNumbers = false;
             evaluatedParts.push(val);
         }
-        if (allNumbers) {
-            return evaluatedParts.reduce((a, b) => a + b, 0);
+        if (allNumbers && evaluatedParts.length > 0) {
+            return evaluatedParts.reduce((a, b) => Number(a) + Number(b), 0);
         } else {
-            return evaluatedParts.map(String).join('');
+            return evaluatedParts.map(v => (v === undefined || v === null) ? "" : String(v)).join('');
         }
     }
     if (expr.startsWith("'") && expr.endsWith("'")) {
@@ -144,12 +146,18 @@ function evaluateExpression(expr, lineNum) {
         varName = expr.replace("localvar.", "");
     }
     if (localvar.hasOwnProperty(varName)) {
-        return localvar[varName];
+        return localvar[varName] !== undefined ? localvar[varName] : "";
     }
+    
+    if (expr.startsWith("\\") && expr.endsWith("█")) {
+        return expr;
+    }
+
     printToConsole("\\glow\\\\red\\Error In Line " + lineNum + ";");
     printToConsole("\\glow\\\\red\\" + expr + " is not known.");
-    return null;
+    return "";
 }
+
 function executeLine(cleanLine, lineNum) {
     if (cleanLine === "" || cleanLine.startsWith("@@")) {
         return true;
