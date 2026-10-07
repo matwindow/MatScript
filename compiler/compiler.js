@@ -47,7 +47,7 @@ const colorsformated = {
     "\\salmon\\": "color: #fa8072;",
     "\\violet\\": "color: #ee82ee;",
     "\\glow\\": "text-shadow: 0 0 8px currentColor, 0 0 15px currentColor;",
-    "\\bold\\": "font-weight: bold;",
+    "\(\bold\\\)": "font-weight: bold;",
     "\\italic\\": "font-style: italic;",
     "\\shiny\\": "animation: customShine 1.5s linear infinite;",
     "\\rainbow\\": "background: linear-gradient(to right, #ff453a, #ff9f0a, #ffd60a, #30d158, #0a84ff, #bf5af2, #ff453a); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: customRainbow 3s linear infinite; width: max-content; display: block;",
@@ -59,18 +59,33 @@ function printToConsole(text) {
     const consoleBox = document.getElementById('console');
     if (!consoleBox) return;
     const lineElement = document.createElement('div');
-    let finalStyle = "";
+    
     let cleanText = String(text);
-    for (const [tag, styleValue] of Object.entries(colorsformated)) {
-        if (cleanText.includes(tag)) {
-            finalStyle += styleValue + " ";
-            cleanText = cleanText.replaceAll(tag, "");
+    const tagNames = Object.keys(colorsformated).map(t => t.replace(/\\/g, '\\\\')).join('|');
+    const regex = new RegExp(`(${tagNames})`, 'g');
+    let parts = cleanText.split(regex);
+    
+    let finalHtml = "";
+    let isSpanOpen = false;
+    
+    for (let part of parts) {
+        if (colorsformated[part] !== undefined) {
+            if (isSpanOpen) {
+                finalHtml += "</span>";
+                isSpanOpen = false;
+            }
+            finalHtml += `<span style="${colorsformated[part]}">`;
+            isSpanOpen = true;
+        } else {
+            finalHtml += part;
         }
     }
-    if (finalStyle !== "") {
-        lineElement.style.cssText = finalStyle;
+    
+    if (isSpanOpen) {
+        finalHtml += "</span>";
     }
-    lineElement.innerText = cleanText;
+    
+    lineElement.innerHTML = finalHtml;
     consoleBox.appendChild(lineElement);
     consoleBox.scrollTop = consoleBox.scrollHeight;
 }
