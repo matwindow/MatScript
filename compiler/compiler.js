@@ -192,62 +192,43 @@ function parseBlocks(lines) {
         let lineNum = i + 1;
         let cleanLine = lines[i].trim();
         if (cleanLine === "" || cleanLine.startsWith("@@")) continue;
-
         if (cleanLine.startsWith("forever")) {
             let blockLines = [];
             let j = i + 1;
-            let braceCount = 1;
-            while (j < lines.length) {
-                let innerLine = lines[j].trim();
-                if (innerLine.includes("{")) braceCount++;
-                if (innerLine === "}") braceCount--;
-                if (braceCount === 0) break;
-                blockLines.push(innerLine);
+            while (j < lines.length && lines[j].trim() !== "}") {
+                blockLines.push(lines[j].trim());
                 j++;
             }
             program.push({ type: 'forever', body: blockLines, line: lineNum });
             i = j;
             continue;
         }
-
         if (cleanLine.startsWith("loop(")) {
             let closeParen = cleanLine.indexOf(")");
             let countExpr = cleanLine.slice(5, closeParen).trim();
             let blockLines = [];
             let j = i + 1;
-            let braceCount = 1;
-            while (j < lines.length) {
-                let innerLine = lines[j].trim();
-                if (innerLine.includes("{")) braceCount++;
-                if (innerLine === "}") braceCount--;
-                if (braceCount === 0) break;
-                blockLines.push(innerLine);
+            while (j < lines.length && lines[j].trim() !== "}") {
+                blockLines.push(lines[j].trim());
                 j++;
             }
             program.push({ type: 'loop', countExpr: countExpr, body: blockLines, line: lineNum });
             i = j;
             continue;
         }
-
         if (cleanLine.startsWith("if(")) {
             let closeParen = cleanLine.indexOf(")");
             let condExpr = cleanLine.slice(3, closeParen).trim();
             let blockLines = [];
             let j = i + 1;
-            let braceCount = 1;
-            while (j < lines.length) {
-                let innerLine = lines[j].trim();
-                if (innerLine.includes("{")) braceCount++;
-                if (innerLine === "}") braceCount--;
-                if (braceCount === 0) break;
-                blockLines.push(innerLine);
+            while (j < lines.length && lines[j].trim() !== "}") {
+                blockLines.push(lines[j].trim());
                 j++;
             }
             program.push({ type: 'if', condExpr: condExpr, body: blockLines, line: lineNum });
             i = j;
             continue;
         }
-
         program.push({ type: 'single', text: cleanLine, line: lineNum });
     }
     return program;
@@ -266,12 +247,10 @@ function executeBlockList(blocks) {
                 let op = match[2].trim();
                 let right = evaluateExpression(match[3], block.line);
                 let conditionMet = false;
-                
                 if (op === "==") conditionMet = (left == right);
                 else if (op === "!=") conditionMet = (left != right);
                 else if (op === "<") conditionMet = (left < right);
                 else if (op === ">") conditionMet = (left > right);
-                
                 if (conditionMet) {
                     let innerBlocks = parseBlocks(block.body);
                     let success = executeBlockList(innerBlocks);
