@@ -1,0 +1,26 @@
+{
+  "$schema": "https://githubusercontent.com",
+  "name": "MatScript",
+  "scopeName": "source.mats",
+  "patterns": [
+    {
+      "name": "comment.line.double-at.mats",
+      "match": "(@@).*$\\n?"
+    },
+    {
+      "name": "keyword.control.mats",
+      "match": "\\b(Say|Say\\.clear|Say\\.error|loop|forever|if|locdef)\\b"
+    },
+    {
+      "name": "string.quoted.single.mats",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape.mats",
+          "match": "\\\\(rainbow|red|glow|shiny|shake|white|blue|green|yellow|purple|orange|pink|cyan|gray)\\\\"
+        }
+      ]
+    }
+  ]
+}
