@@ -1,1 +1,6 @@
-Say('Hellow World!')
+Say('\rainbow\Hellow World!')
+locdef i 0
+loop(20){
+localvar.i = localvar.i + 1
+Say('\lime\\shiny\Repeat Number '+localvar.i+'!')
+}
